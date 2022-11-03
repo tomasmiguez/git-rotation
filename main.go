@@ -36,15 +36,28 @@ func fmtDuration(duration time.Duration) string {
 	return fmt.Sprintf("%.f", days)
 }
 
-func main() {
-	flag.Parse()
+func formatDate(d time.Time) string {
+	return d.Format("2006/01/02")
+}
 
-	repo, err := git.PlainOpen(*dir)
+func getCommitIter(dir string) (object.CommitIter, error) {
+	repo, err := git.PlainOpen(dir)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	cIter, err := repo.Log(&git.LogOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return cIter, nil
+}
+
+func main() {
+	flag.Parse()
+
+	cIter, err := getCommitIter(*dir)
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +78,8 @@ func main() {
 
 		return nil
 	})
+
 	for name, interval := range intervals {
-		fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", interval.From.Format("2006/01/02"), " ", interval.To.Format("2006/01/02"), ")")
+		fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", formatDate(interval.From), " ", formatDate(interval.To), ")")
 	}
 }
