@@ -65,7 +65,6 @@ func main() {
 
 		return nil
 	})
-	// .Format("2006/01/02")
 	for name, interval := range intervals {
 		fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", interval.From.Format("2006/01/02"), " ", interval.To.Format("2006/01/02"), ")")
 	}
