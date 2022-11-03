@@ -19,15 +19,13 @@ func exPath() string {
 	return filepath.Dir(ex)
 }
 
-var dir = flag.String("dir", exPath(), "directory of the repository")
-
-type Interval struct {
+type interval struct {
 	From time.Time
 	To   time.Time
 }
 
-func (interval Interval) duration() time.Duration {
-	return interval.To.Sub(interval.From)
+func (i interval) duration() time.Duration {
+	return i.To.Sub(i.From)
 }
 
 func fmtDuration(duration time.Duration) string {
@@ -54,18 +52,17 @@ func getCommitIter(dir string) (object.CommitIter, error) {
 	return cIter, nil
 }
 
-func main() {
-	flag.Parse()
+type intervalMap map[string]interval
 
-	cIter, err := getCommitIter(*dir)
+func (intervals *intervalMap) processDir(dir string) (error) {
+	cIter, err := getCommitIter(dir)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	intervals := make(map[string]Interval)
-	err = cIter.ForEach(func(c *object.Commit) error {
-		if entry, prs := intervals[c.Author.Email]; !prs {
-			intervals[c.Author.Email] = Interval{From: c.Author.When, To: c.Author.When}
+	cIter.ForEach(func(c *object.Commit) error {
+		if entry, prs := (*intervals)[c.Author.Email]; !prs {
+			(*intervals)[c.Author.Email] = interval{From: c.Author.When, To: c.Author.When}
 		} else {
 			if c.Author.When.Before(entry.From) {
 				entry.From = c.Author.When
@@ -73,11 +70,26 @@ func main() {
 			if c.Author.When.After(entry.To) {
 				entry.To = c.Author.When
 			}
-			intervals[c.Author.Email] = entry
+			(*intervals)[c.Author.Email] = entry
 		}
 
 		return nil
 	})
+
+	return nil
+}
+
+func main() {
+	flag.Parse()
+	dirs := flag.Args()
+
+	intervals := make(intervalMap)
+	for _, dir := range dirs {
+		err := intervals.processDir(dir)
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	for name, interval := range intervals {
 		fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", formatDate(interval.From), " ", formatDate(interval.To), ")")
