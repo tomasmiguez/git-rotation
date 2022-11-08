@@ -79,8 +79,20 @@ func (intervals *intervalMap) processDir(dir string) (error) {
 	return nil
 }
 
+var upTo = flag.String("upTo", "", "last termination date, formatted as 08-11-2022")
+
 func main() {
 	flag.Parse()
+
+	var upToDate time.Time
+	if *upTo != "" {
+		var err error
+		upToDate, err = time.Parse("02-01-2006", *upTo)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	dirs := flag.Args()
 
 	intervals := make(intervalMap)
@@ -92,6 +104,8 @@ func main() {
 	}
 
 	for name, interval := range intervals {
-		fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", formatDate(interval.From), " ", formatDate(interval.To), ")")
+		if (*upTo == "" || interval.To.Sub(upToDate) < 0) {
+			fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", formatDate(interval.From), " ", formatDate(interval.To), ")")
+		}
 	}
 }
