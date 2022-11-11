@@ -24,14 +24,8 @@ type interval struct {
 	To   time.Time
 }
 
-func (i interval) duration() time.Duration {
-	return i.To.Sub(i.From)
-}
-
-func fmtDuration(duration time.Duration) string {
-	days := duration.Hours() / 24
-
-	return fmt.Sprintf("%.f", days)
+func (i interval) duration() int {
+	return int(i.To.Sub(i.From).Hours() / 24)
 }
 
 func formatDate(d time.Time) string {
@@ -79,7 +73,10 @@ func (intervals *intervalMap) processDir(dir string) (error) {
 	return nil
 }
 
-var upTo = flag.String("upTo", "", "last termination date, formatted as 08-11-2022")
+var (
+	upTo = flag.String("upTo", "", "last termination date, formatted as 08-11-2022")
+	min  = flag.Int("min", 0, "minimum numbers of days worked")
+)
 
 func main() {
 	flag.Parse()
@@ -103,9 +100,17 @@ func main() {
 		}
 	}
 
-	for name, interval := range intervals {
-		if (*upTo == "" || interval.To.Sub(upToDate) < 0) {
-			fmt.Println(name, ": ", fmtDuration(interval.duration()), " (", formatDate(interval.From), " ", formatDate(interval.To), ")")
+	var total int
+	var acum int
+	for name, i := range intervals {
+		if ((*min < i.duration()) && (*upTo == "" || interval{From: upToDate, To: i.To}.duration() < 0)) {
+			acum++
+			total += i.duration()
+
+			fmt.Println(name, ": ",	fmt.Sprintf("%.d", i.duration()), " (", formatDate(i.From), " ", formatDate(i.To), ")")
 		}
 	}
+
+	fmt.Println()
+	fmt.Println(total/acum)
 }
